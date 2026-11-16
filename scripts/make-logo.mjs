@@ -42,10 +42,10 @@ const pick = (arr) => arr[Math.floor(rand() * arr.length)];
 const r1 = (n) => Math.round(n * 10) / 10;
 
 // Swirl placement: lower-left of the canvas, leaving the top-right corner
-// free for the dissolve to fly into.
-const SW = 420; // swirl size
-const SX = 52;
-const SY = 62;
+// free for the dissolve and the code it turns into.
+const SW = 410; // swirl size
+const SX = 40;
+const SY = 84;
 const CX = SX + SW / 2;
 const CY = SY + SW / 2;
 const R = SW * 0.47; // visible disc radius in the source art
@@ -53,28 +53,32 @@ const R = SW * 0.47; // visible disc radius in the source art
 // Unit vector toward the top-right corner.
 const DX = Math.SQRT1_2;
 const DY = -Math.SQRT1_2;
+const proj = (x, y) => (x - CX) * DX + (y - CY) * DY; // distance along the dissolve direction
 
 const CELL = 16;
 const removed = []; // cells cut out of the swirl
-const flying = []; // displaced pieces (blocks or code bars)
+const pieces = []; // where cut cells end up
 
+// Dissolve: dense right at the break (pieces barely move), thinning out and
+// spreading the farther they fly.
 for (let y = SY; y < SY + SW; y += CELL) {
   for (let x = SX; x < SX + SW; x += CELL) {
     const cx = x + CELL / 2;
     const cy = y + CELL / 2;
-    const dist = Math.hypot(cx - CX, cy - CY);
-    if (dist > R + CELL * 0.7) continue; // outside the disc
-    // How far toward the top-right this cell sits, -1..1.
-    const t = ((cx - CX) * DX + (cy - CY) * DY) / R;
-    const edge = 0.5 + (rand() - 0.5) * 0.3; // ragged dissolve front
-    // Scattered holes just before the front, solid removal beyond it.
-    if (t < edge && !(t > edge - 0.16 && rand() < 0.3)) continue;
+    if (Math.hypot(cx - CX, cy - CY) > R + CELL * 0.6) continue; // outside the disc
+    const t = proj(cx, cy) / R; // -1..1 toward the top-right
+    const edge = 0.46 + (rand() - 0.5) * 0.24; // ragged break line
+    // Just behind the break, some cells come loose but stay almost in place.
+    const loosening = t < edge && t > edge - 0.12 && rand() < 0.4;
+    if (t < edge && !loosening) continue;
     removed.push([x, y]);
-    // Not every removed cell survives as a visible piece.
-    if (rand() < 0.18) continue;
-    const k = Math.max(0, (t - edge) / (1 - edge + 1e-6)); // 0 at the front, 1 at the far edge
-    const push = 14 + k * 95 + rand() * 40;
-    flying.push({ x, y, k, push, jitter: (rand() - 0.5) * 18 });
+    // Cells on the rim are mostly empty; flying, they'd read as stray slivers.
+    if (Math.hypot(cx - CX, cy - CY) > R - CELL * 0.35) continue;
+    const k = loosening ? 0 : Math.min(1, (t - edge) / (1 - edge)); // 0 at the break, 1 at the far rim
+    if (rand() > 0.98 - k * 0.72) continue; // survivors thin out with distance
+    const push = loosening ? 2 + rand() * 4 : 4 + Math.pow(k, 1.5) * 78 + rand() * (6 + k * 18);
+    const side = (rand() - 0.5) * (4 + k * 26); // sideways spread grows with distance
+    pieces.push({ x, y, k, tx: push * DX - side * DY, ty: push * DY + side * DX });
   }
 }
 
@@ -84,47 +88,57 @@ let blocks = '';
 let bars = '';
 let clips = '';
 let clipId = 0;
-for (const f of flying) {
-  const tx = f.push * DX + f.jitter * DY * -1;
-  const ty = f.push * DY + f.jitter * DX;
-  const nx = f.x + tx;
-  const ny = f.y + ty;
-  if (nx < 8 || ny < 10 || nx + CELL > S - 8) continue; // keep inside the canvas
-  if (f.k < 0.55) {
-    // Near the front: real pieces of the swirl, shrinking as they fly.
-    const scale = 1 - f.k * 0.55;
-    const id = `c${clipId++}`;
-    clips += `<clipPath id="${id}"><rect x="${f.x}" y="${f.y}" width="${CELL}" height="${CELL}" rx="2"/></clipPath>`;
-    const c = { x: f.x + CELL / 2, y: f.y + CELL / 2 };
-    blocks +=
-      `<g transform="translate(${r1(tx)} ${r1(ty)}) translate(${c.x} ${c.y}) scale(${r1(scale * 100) / 100}) translate(${-c.x} ${-c.y})" opacity="${r1((1 - f.k * 0.5) * 100) / 100}">` +
-      `<use href="#swirl" clip-path="url(#${id})"/></g>`;
-  } else {
-    // Farther out: pieces flatten into code bars snapped to text rows.
-    const row = Math.round(ny / 11) * 11;
-    const w = Math.min(10 + Math.round(rand() * 40), S - 10 - Math.round(nx));
-    if (w < 8) continue;
-    const op = r1((0.95 - (f.k - 0.55) * 0.9) * 100) / 100;
-    bars += `<rect x="${r1(nx)}" y="${row}" width="${w}" height="5.5" rx="2.75" fill="${pick(palette)}" opacity="${Math.max(0.25, op)}"/>`;
+const placed = []; // block boxes, so code bars don't overlap them
+for (const f of pieces) {
+  const nx = f.x + f.tx;
+  const ny = f.y + f.ty;
+  if (nx < 6 || ny < 6 || nx + CELL > S - 6) continue; // keep inside the canvas
+  if (f.k > 0.62 && rand() < 0.45) {
+    // The outermost pieces start turning into code: stretched bars.
+    const w = 12 + Math.round(rand() * 18);
+    bars += `<rect x="${r1(nx)}" y="${r1(ny + 5)}" width="${w}" height="5.5" rx="2.75" fill="${pick(palette)}" opacity="${r1((1 - f.k * 0.3) * 100) / 100}"/>`;
+    placed.push({ x: nx, y: ny + 5, w, h: 6 });
+    continue;
   }
+  const scale = 1 - f.k * 0.42;
+  const id = `c${clipId++}`;
+  clips += `<clipPath id="${id}"><rect x="${f.x}" y="${f.y}" width="${CELL}" height="${CELL}" rx="2"/></clipPath>`;
+  const c = { x: f.x + CELL / 2, y: f.y + CELL / 2 };
+  blocks +=
+    `<g transform="translate(${r1(f.tx)} ${r1(f.ty)}) translate(${c.x} ${c.y}) scale(${r1(scale * 100) / 100}) translate(${-c.x} ${-c.y})" opacity="${r1((1 - f.k * 0.3) * 100) / 100}">` +
+    `<use href="#swirl" clip-path="url(#${id})"/></g>`;
+  const sz = CELL * scale;
+  placed.push({ x: c.x + f.tx - sz / 2, y: c.y + f.ty - sz / 2, w: sz, h: sz });
 }
 
-// A loose block of code lines in the top-right corner: rows of bars with
-// indentation, thinning out toward the corner.
+// Code lines pick up right where the blocks thin out: rows of bars filling
+// the top-right corner beyond the outer edge of the block cloud.
+const fronts = placed.map((b) => proj(b.x + b.w / 2, b.y + b.h / 2)).sort((a, b) => a - b);
+const frontier = fronts[Math.floor(fronts.length * 0.7)] ?? R; // most of the cloud lies inside this
+const overlaps = (x, y, w, h) => placed.some((b) => x < b.x + b.w + 3 && x + w + 3 > b.x && y < b.y + b.h + 2 && y + h + 2 > b.y);
 let code = '';
-const rows = 10;
-for (let i = 0; i < rows; i++) {
-  const y = 18 + i * 11;
-  const startX = 318 + i * 8 + (i % 3 === 1 ? 14 : 0) + (i % 4 === 2 ? 24 : 0);
-  let x = startX;
-  const tokens = 1 + Math.floor(rand() * 3);
-  for (let j = 0; j < tokens; j++) {
-    const w = 8 + Math.round(rand() * 38);
-    if (x + w > S - 10) break;
-    // Fade rows nearer the swirl so they hand over to the flying bars.
-    const op = r1((0.95 - i / rows * 0.55) * 100) / 100;
-    code += `<rect x="${x}" y="${y}" width="${w}" height="5.5" rx="2.75" fill="${pick(palette)}" opacity="${op}"/>`;
-    x += w + 6;
+for (let y = 12; y < S - 40; y += 11) {
+  // Start of this row: where the cloud's frontier line crosses it, pulled
+  // back a little so the first bars interleave with the last blocks.
+  let x = Math.round(CX + (frontier - 22 - (y - CY) * DY) / DX);
+  x += Math.round(rand() * 10) + (rand() < 0.3 ? 14 : 0); // indentation
+  if (x > S - 30) continue;
+  x = Math.max(x, 8);
+  const rowStart = x;
+  const span = S - 14 - rowStart;
+  while (x < S - 14) {
+    const w = Math.min(8 + Math.round(rand() * 30), S - 10 - x);
+    if (w < 6) break;
+    // Thick where the code meets the blocks, scattering toward the edges.
+    const along = (x - rowStart) / Math.max(span, 1);
+    const fromCloud = Math.min(1, Math.max(0, (CX + (frontier - (y - CY) * DY) / DX - x + 170) / 200));
+    const keep = 0.3 + 0.65 * fromCloud * (1 - along * 0.45);
+    if (rand() < keep && !overlaps(x, y, w, 5.5)) {
+      const op = r1((0.45 + 0.5 * fromCloud) * 100) / 100;
+      code += `<rect x="${x}" y="${y}" width="${w}" height="5.5" rx="2.75" fill="${pick(palette)}" opacity="${op}"/>`;
+      placed.push({ x, y, w, h: 5.5 });
+    }
+    x += w + 5 + (rand() < 0.15 ? 18 : 0);
   }
 }
 
@@ -133,10 +147,10 @@ const maskHoles = removed.map(([x, y]) => `<rect x="${x - 0.5}" y="${y - 0.5}" w
 const swirl = dataUrl('swirl.png', 512);
 const wrench = dataUrl('monkey_wrench.png', 288);
 
-// Wrench: mirrored so the jaw points up-right at the swirl, bottom-left corner.
-const WS = 228;
-const WX = -10;
-const WY = S - WS + 8;
+// Wrench: bottom-left, as drawn (jaw top-left), lying across the swirl.
+const WS = 250;
+const WX = 2;
+const WY = S - WS - 18;
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}">
 <title>WbSmUtil</title>
@@ -176,10 +190,10 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" wid
 <g>${blocks}</g>
 <g filter="url(#glow)">${bars}${code}</g>
 <g filter="url(#shadow)">
-  <image href="${wrench}" x="${WX}" y="${WY}" width="${WS}" height="${WS}" transform="translate(${2 * WX + WS} 0) scale(-1 1)"/>
+  <image href="${wrench}" x="${WX}" y="${WY}" width="${WS}" height="${WS}"/>
 </g>
 </svg>
 `;
 
 writeFileSync(OUT, svg);
-console.log(`${OUT}: ${(svg.length / 1024).toFixed(0)} KB, ${removed.length} cells dissolved, ${flying.length} pieces`);
+console.log(`${OUT}: ${(svg.length / 1024).toFixed(0)} KB, ${removed.length} cells dissolved, ${pieces.length} pieces`);
