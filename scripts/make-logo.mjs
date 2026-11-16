@@ -59,26 +59,41 @@ const CELL = 16;
 const removed = []; // cells cut out of the swirl
 const pieces = []; // where cut cells end up
 
-// Dissolve: dense right at the break (pieces barely move), thinning out and
-// spreading the farther they fly.
+// Dissolve, keeping the swirl's round silhouette: only a crescent along the
+// top-right rim breaks up, and those pieces stay roughly in place (cracks
+// open between them). Fragments thrown off the rim fly outward on top.
+const rimCells = [];
 for (let y = SY; y < SY + SW; y += CELL) {
   for (let x = SX; x < SX + SW; x += CELL) {
     const cx = x + CELL / 2;
     const cy = y + CELL / 2;
-    if (Math.hypot(cx - CX, cy - CY) > R + CELL * 0.6) continue; // outside the disc
+    const dist = Math.hypot(cx - CX, cy - CY);
+    if (dist > R + CELL * 0.6) continue; // outside the disc
     const t = proj(cx, cy) / R; // -1..1 toward the top-right
-    const edge = 0.46 + (rand() - 0.5) * 0.24; // ragged break line
-    // Just behind the break, some cells come loose but stay almost in place.
-    const loosening = t < edge && t > edge - 0.12 && rand() < 0.4;
+    const edge = 0.6 + (rand() - 0.5) * 0.2; // ragged break line
+    // Just behind the break, some cells crack loose but barely move.
+    const loosening = t < edge && t > edge - 0.1 && rand() < 0.35;
     if (t < edge && !loosening) continue;
     removed.push([x, y]);
-    // Cells on the rim are mostly empty; flying, they'd read as stray slivers.
-    if (Math.hypot(cx - CX, cy - CY) > R - CELL * 0.35) continue;
-    const k = loosening ? 0 : Math.min(1, (t - edge) / (1 - edge)); // 0 at the break, 1 at the far rim
-    if (rand() > 0.98 - k * 0.72) continue; // survivors thin out with distance
-    const push = loosening ? 2 + rand() * 4 : 4 + Math.pow(k, 1.5) * 78 + rand() * (6 + k * 18);
-    const side = (rand() - 0.5) * (4 + k * 26); // sideways spread grows with distance
-    pieces.push({ x, y, k, tx: push * DX - side * DY, ty: push * DY + side * DX });
+    // Cells on the rim are mostly empty; moved, they'd read as stray slivers.
+    if (dist > R - CELL * 0.35) continue;
+    const k = loosening ? 0 : Math.min(1, (t - edge) / (1 - edge)); // 0 at the break, 1 at the rim
+    if (rand() > 0.99 - k * 0.3) continue; // nearly all stay, so the outline holds
+    const push = loosening ? 1 + rand() * 3 : 2 + Math.pow(k, 1.6) * 16 + rand() * 4;
+    const side = (rand() - 0.5) * (3 + k * 8);
+    pieces.push({ x, y, k: k * 0.35, tx: push * DX - side * DY, ty: push * DY + side * DX });
+    if (dist > R - CELL * 2.6 && dist < R - CELL * 0.7) rimCells.push({ x, y, t }); // full cells only
+  }
+}
+// Thrown-off fragments: copies of rim cells, densest near the rim and
+// thinning out as they fly toward the corner.
+for (const c of rimCells) {
+  const copies = 1 + (rand() < 0.7 ? 1 : 0) + (rand() < 0.35 ? 1 : 0);
+  for (let i = 0; i < copies; i++) {
+    const a = Math.pow(rand(), 1.35); // biased toward short flights
+    const push = 16 + a * 120;
+    const side = (rand() - 0.5) * (10 + a * 50);
+    pieces.push({ x: c.x, y: c.y, k: 0.25 + a * 0.75, tx: push * DX - side * DY, ty: push * DY + side * DX });
   }
 }
 

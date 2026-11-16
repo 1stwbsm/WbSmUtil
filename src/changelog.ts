@@ -8,22 +8,12 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
-    version: '0.4.6',
-    date: '2026-11-16',
-    changes: ['Logo: the code lines start right where the blocks thin out, and the wrench sits closer to the swirl.'],
-  },
-  {
-    version: '0.4.5',
-    date: '2026-11-16',
-    changes: [
-      'The WbSmUtil logo now shows in the window’s title bar and on the Home tab.',
-      'Logo refresh: the code lines sit behind the blocks and stay near the top-right corner.',
-    ],
-  },
-  {
     version: '0.4.4',
     date: '2026-11-16',
-    changes: ['New logo, also used as the userscript icon in your userscript manager.'],
+    changes: [
+      'New logo: a blue swirl whose top-right rim breaks into blocks and lines of code, with a wrench.',
+      'The logo shows in the window’s title bar, on the Home tab, as the userscript icon, and on the docs site.',
+    ],
   },
   {
     version: '0.4.3',
