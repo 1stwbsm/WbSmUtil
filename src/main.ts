@@ -70,7 +70,7 @@ if (!site) {
 window.WbSmUtil = { open: () => void open(), close: closeShell, toggle: () => void toggle() };
 
 // One line per frame so it's easy to see where the script actually runs.
-console.info(`[WbSmUtil] loaded in ${location.host} (${site ? 'websim page: forwards to project frame' : 'project frame'}). ${HOTKEY.label} toggles.`);
+console.info(`[WbSmUtil] loaded in ${location.host} (${site ? 'websim page: forwards to project frame' : 'project frame'}, page world). ${HOTKEY.label} toggles.`);
 
 // Capture phase on window, registered at document-start, so a project's own
 // key handlers can't swallow it.

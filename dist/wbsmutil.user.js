@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         WbSmUtil
 // @namespace    wbsmutil
-// @version      0.3.0
-// @description  Dev toolkit userscript for websim projects. Ctrl+` toggles the panel inside a project frame.
+// @version      0.4.0
+// @description  Dev toolkit userscript for websim projects. Ctrl+Backtick toggles the panel inside a project frame.
 // @match        https://websim.com/*
 // @match        https://*.websim.com/*
 // @match        https://websim.ai/*
@@ -14,9 +14,14 @@
 // @downloadURL  https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js
 // @updateURL    https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js
 // @grant        none
+// @inject-into  auto
 // @run-at       document-start
 // ==/UserScript==
 
+(function () {
+function __wbsmutilMain() {
+if (window.__wbsmutilLoaded) return; window.__wbsmutilLoaded = true;
+try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
 "use strict";
 (() => {
   // src/core/bridge.ts
@@ -3366,7 +3371,7 @@
     });
   }
   window.WbSmUtil = { open: () => void open(), close: closeShell, toggle: () => void toggle() };
-  console.info(`[WbSmUtil] loaded in ${location.host} (${site ? "websim page: forwards to project frame" : "project frame"}). ${HOTKEY.label} toggles.`);
+  console.info(`[WbSmUtil] loaded in ${location.host} (${site ? "websim page: forwards to project frame" : "project frame"}, page world). ${HOTKEY.label} toggles.`);
   window.addEventListener(
     "keydown",
     (e) => {
@@ -3377,4 +3382,67 @@
     },
     true
   );
+})();
+}
+"use strict";
+(() => {
+  // src/loader.ts
+  var FLAG = "data-wbsmutil";
+  var TAG = "[WbSmUtil]";
+  var running = () => !!document.documentElement?.hasAttribute(FLAG);
+  var contentWorld = typeof window.wrappedJSObject === "object";
+  function inject(nonce) {
+    const parent = document.head ?? document.documentElement;
+    if (!parent) return false;
+    const script = document.createElement("script");
+    if (nonce) {
+      script.nonce = nonce;
+      script.setAttribute("nonce", nonce);
+    }
+    script.textContent = `(${__wbsmutilMain.toString()})();`;
+    parent.appendChild(script);
+    script.remove();
+    return running();
+  }
+  function pageNonce() {
+    for (const s of document.querySelectorAll("script")) {
+      const n = s.nonce || s.getAttribute("nonce");
+      if (n) return n;
+    }
+    return "";
+  }
+  function load() {
+    if (running()) return;
+    if (!pageNonce() && inject()) return;
+    const nonce = pageNonce();
+    if (nonce && inject(nonce)) return;
+    if (!contentWorld) {
+      __wbsmutilMain();
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (running()) return observer.disconnect();
+      const n = pageNonce();
+      if (n && inject(n)) observer.disconnect();
+    });
+    observer.observe(document, { childList: true, subtree: true });
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
+        observer.disconnect();
+        if (!running()) {
+          console.warn(
+            `${TAG} could not run in ${location.host}: the page's Content-Security-Policy blocked injection and no script nonce was available.`
+          );
+        }
+      },
+      { once: true }
+    );
+  }
+  try {
+    load();
+  } catch (error) {
+    console.warn(`${TAG} loader error in ${location.host}:`, error);
+  }
+})();
 })();

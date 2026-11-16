@@ -11,7 +11,11 @@ npm run watch      # rebuild on change
 npm run typecheck
 ```
 
-**[Install](https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js)** (Tampermonkey or Violentmonkey; updates automatically), or build it and install `dist/wbsmutil.user.js`. Then open a project on websim.com, and press **Ctrl+`** (backtick, the key left of 1). The shortcut is set in `src/core/hotkey.ts`. You can also run `WbSmUtil.open()` from the console.
+**[Install](https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js)** (Tampermonkey or Violentmonkey; updates automatically), or build it and install `dist/wbsmutil.user.js`. Then open a project on websim.com, and press **Ctrl+Backtick** (the key left of 1). The shortcut is set in `src/core/hotkey.ts`. You can also run `WbSmUtil.open()` from the console.
+
+Each frame the script runs in logs a `[WbSmUtil] loaded in …` line to the console. If there's no line for the `<id>.c.websim.com` project frame, the script isn't running there.
+
+**Firefox / Violentmonkey:** websim's Content-Security-Policy blocks Violentmonkey's normal page injection. The script uses `@inject-into auto` and re-injects itself with the page's script nonce (`src/loader.ts`), so no settings changes are needed. Expect one harmless "Content-Security-Policy … blocked an inline script" console message per page from the first attempt.
 
 Websim shows each project inside an iframe on a `*.websim.com` subdomain. The script runs in both the websim.com page and the project iframe:
 
