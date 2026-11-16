@@ -42,6 +42,7 @@ const common = {
   loader: { '.css': 'text' },
   write: false,
   logLevel: 'warning',
+  define: { __VERSION__: JSON.stringify(pkg.version) },
 };
 
 /**

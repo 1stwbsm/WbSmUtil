@@ -26,6 +26,7 @@ Websim shows each project inside an iframe on a `*.websim.com` subdomain. The sc
 
 | Tab | What it does |
 |---|---|
+| Home | Version, status badges, shortcuts to every tab, and the changelog (`src/changelog.ts`). The window opens here |
 | Database | Legacy `room.collection()` databases: discover collections, browse records, create entries |
 | API | Request builder for `/api/*` (sent with your real identity headers), saved requests, a log of every `fetch`, and route discovery from the public `server.js` and page source |
 | Multiplayer | Packet sniffer for `WebsimSocket.joinRoom()` rooms and legacy sockets: shows packets in (↓) and out (↑), sends packets, simulates incoming ones, replays them, and shows legacy presence/roomState |

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WbSmUtil
 // @namespace    wbsmutil
-// @version      0.4.0
+// @version      0.4.1
 // @description  Dev toolkit userscript for websim projects. Ctrl+Backtick toggles the panel inside a project frame.
 // @match        https://websim.com/*
 // @match        https://*.websim.com/*
@@ -2602,6 +2602,132 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
     if (!stopped()) await scan();
   }
 
+  // src/changelog.ts
+  var CHANGELOG = [
+    {
+      version: "0.4.1",
+      date: "2026-11-16",
+      changes: ["New Home tab with this changelog. The window now opens here instead of on Database."]
+    },
+    {
+      version: "0.4.0",
+      date: "2026-11-16",
+      changes: [
+        "Fixed WbSmUtil not running at all in Firefox/Violentmonkey: websim’s Content-Security-Policy blocked the injection.",
+        "It now falls back to a content script and re-injects itself with the page’s script nonce."
+      ]
+    },
+    {
+      version: "0.3.0",
+      date: "2026-11-16",
+      changes: [
+        "Hotkey changed from Alt+Shift+D to Ctrl+Backtick (Alt combos clash with Firefox and Linux desktops).",
+        "Each frame logs a “[WbSmUtil] loaded in …” console line."
+      ]
+    },
+    {
+      version: "0.2.0",
+      date: "2026-11-16",
+      changes: [
+        "Renamed from Pocket DB to WbSmUtil.",
+        "Runs inside the project iframe; the websim.com page forwards the hotkey, and “Move into project frame” moves the window there.",
+        "New tabs: API, Multiplayer, AI, Comments, Project, Console, Storage.",
+        "Hooks start at page load, so logs include what the project did before you opened the panel.",
+        "The Database tab only uses an existing room and never creates one."
+      ]
+    },
+    {
+      version: "Pocket DB",
+      date: "2026-11-15",
+      changes: ["The original websim database inspector, rewritten in TypeScript as a userscript."]
+    }
+  ];
+
+  // src/tools/home/index.ts
+  var SHORTCUTS = [
+    ["database", "Database", "Legacy room.collection() data"],
+    ["api", "API", "Call /api routes, see traffic"],
+    ["multiplayer", "Multiplayer", "Sniff and send room packets"],
+    ["ai", "AI", "AI call monitor and playgrounds"],
+    ["comments", "Comments", "Browse, live events, post"],
+    ["project", "Project", "Identity, hooks, users API"],
+    ["console", "Console", "Logs, errors, run JS"],
+    ["storage", "Storage", "localStorage, IndexedDB, cookies"]
+  ];
+  var homeTool = {
+    id: "home",
+    label: "Home",
+    css: `
+.home { gap: 12px; }
+.home-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.home-head h2 { margin: 0; font-size: 18px; color: #eef0f3; }
+.home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.home-cards button { text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 7px 9px; white-space: normal; }
+.home-cards button strong { color: #eef0f3; font-weight: 600; }
+.home-cards button span { font-size: 10px; color: #8c98a4; }
+.home-status { display: flex; gap: 6px; flex-wrap: wrap; }
+.release { border-left: 2px solid #38414b; padding: 2px 0 2px 10px; }
+.release:first-child { border-left-color: #6f8f62; }
+.release h3 { margin: 0 0 3px; font-size: 12px; color: #eef0f3; display: flex; gap: 8px; align-items: baseline; }
+.release h3 .muted { font-weight: 400; font-size: 10px; }
+.release ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 2px; }
+kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid #424a53; border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; }
+`,
+    mount(ctx) {
+      const ws = getWebsim();
+      const hasSocket = typeof window.WebsimSocket === "function";
+      const badge = (ok, text) => h("span", { class: "badge " + (ok ? "good" : "bad"), text });
+      ctx.pane.append(
+        h(
+          "div",
+          { class: "scroll pad stack home" },
+          h(
+            "div",
+            { class: "home-head" },
+            h("h2", { text: "WbSmUtil" }),
+            h("span", { class: "badge", text: "v0.4.1" }),
+            h("span", { class: "muted" }, "Toggle with ", h("kbd", { text: HOTKEY.label }), " · ", location.host)
+          ),
+          h(
+            "div",
+            { class: "home-status" },
+            badge(!!ws, ws ? "websim API" : "no websim API"),
+            badge(hasSocket, hasSocket ? "WebsimSocket" : "no WebsimSocket"),
+            badge(hub.rooms.list.length > 0, hub.rooms.list.length ? `${hub.rooms.list.length} room(s)` : "no room"),
+            badge(window !== window.top, window !== window.top ? "in project frame" : "top level")
+          ),
+          h(
+            "div",
+            { class: "home-cards" },
+            SHORTCUTS.map(
+              ([id, label, desc]) => h("button", { type: "button", onclick: () => ctx.open(id) }, h("strong", { text: label }), h("span", { text: desc }))
+            )
+          ),
+          h(
+            "fieldset",
+            {},
+            h("legend", { text: "Changelog" }),
+            CHANGELOG.map(
+              (r) => h(
+                "div",
+                { class: "release" },
+                h("h3", {}, r.version, h("span", { class: "muted", text: r.date })),
+                h("ul", {}, r.changes.map((c) => h("li", { text: c })))
+              )
+            )
+          ),
+          h(
+            "p",
+            { class: "hint" },
+            "Source and issues: ",
+            h("a", { href: "https://github.com/1stwbsm/WbSmUtil", target: "_blank", rel: "noopener", text: "github.com/1stwbsm/WbSmUtil" })
+          )
+        )
+      );
+      ctx.status(`WbSmUtil v${"0.4.1"} ready.`);
+    }
+  };
+
   // src/tools/multiplayer/index.ts
   var multiplayerTool = {
     id: "multiplayer",
@@ -3311,6 +3437,7 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
 
   // src/tools/index.ts
   var tools = [
+    homeTool,
     databaseTool,
     apiTool,
     multiplayerTool,
