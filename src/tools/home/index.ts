@@ -1,3 +1,4 @@
+import logo from '../../assets/logo-96.png';
 import { CHANGELOG } from '../../changelog';
 import { HOTKEY } from '../../core/hotkey';
 import { hub } from '../../core/hub';
@@ -25,6 +26,8 @@ export const homeTool: Tool = {
   css: `
 .home { gap: 12px; }
 .home-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.home-head { align-items: center; }
+.home-logo { width: 48px; height: 48px; flex-shrink: 0; }
 .home-head h2 { margin: 0; font-size: 18px; color: #eef0f3; }
 .home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
 .home-cards button { text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 7px 9px; white-space: normal; }
@@ -50,6 +53,7 @@ kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid
         h(
           'div',
           { class: 'home-head' },
+          h('img', { class: 'home-logo', src: logo, alt: '', width: 48, height: 48 }),
           h('h2', { text: 'WbSmUtil' }),
           h('span', { class: 'badge', text: 'v' + __VERSION__ }),
           h('span', { class: 'muted' }, 'Toggle with ', h('kbd', { text: HOTKEY.label }), ' · ', location.host),

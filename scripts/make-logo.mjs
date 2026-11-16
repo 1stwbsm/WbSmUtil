@@ -111,34 +111,27 @@ for (const f of pieces) {
   placed.push({ x: c.x + f.tx - sz / 2, y: c.y + f.ty - sz / 2, w: sz, h: sz });
 }
 
-// Code lines pick up right where the blocks thin out: rows of bars filling
-// the top-right corner beyond the outer edge of the block cloud.
+// Code lines linger in the top-right corner, starting just inside the
+// outer edge of the block cloud. They're drawn behind the swirl and the
+// blocks, so pieces fly over them rather than the code covering the logo.
 const fronts = placed.map((b) => proj(b.x + b.w / 2, b.y + b.h / 2)).sort((a, b) => a - b);
-const frontier = fronts[Math.floor(fronts.length * 0.7)] ?? R; // most of the cloud lies inside this
-const overlaps = (x, y, w, h) => placed.some((b) => x < b.x + b.w + 3 && x + w + 3 > b.x && y < b.y + b.h + 2 && y + h + 2 > b.y);
+const frontier = fronts[Math.floor(fronts.length * 0.7)] ?? R;
+const CORNER = { x: S - 8, y: 8 };
 let code = '';
-for (let y = 12; y < S - 40; y += 11) {
-  // Start of this row: where the cloud's frontier line crosses it, pulled
-  // back a little so the first bars interleave with the last blocks.
-  let x = Math.round(CX + (frontier - 22 - (y - CY) * DY) / DX);
-  x += Math.round(rand() * 10) + (rand() < 0.3 ? 14 : 0); // indentation
-  if (x > S - 30) continue;
-  x = Math.max(x, 8);
-  const rowStart = x;
-  const span = S - 14 - rowStart;
-  while (x < S - 14) {
+for (let y = 10; y < 300; y += 11) {
+  let x = Math.max(8, Math.round(CX + (frontier - 46 - (y - CY) * DY) / DX));
+  x += Math.round(rand() * 10) + (rand() < 0.3 ? 12 : 0); // indentation
+  while (x < S - 12) {
     const w = Math.min(8 + Math.round(rand() * 30), S - 10 - x);
     if (w < 6) break;
-    // Thick where the code meets the blocks, scattering toward the edges.
-    const along = (x - rowStart) / Math.max(span, 1);
-    const fromCloud = Math.min(1, Math.max(0, (CX + (frontier - (y - CY) * DY) / DX - x + 170) / 200));
-    const keep = 0.3 + 0.65 * fromCloud * (1 - along * 0.45);
-    if (rand() < keep && !overlaps(x, y, w, 5.5)) {
-      const op = r1((0.45 + 0.5 * fromCloud) * 100) / 100;
+    // Dense near the corner, fading out with distance from it.
+    const d = Math.hypot(CORNER.x - (x + w / 2), y - CORNER.y);
+    const near = Math.max(0, 1 - Math.max(0, d - 60) / 150);
+    if (rand() < 0.95 * Math.pow(near, 1.3)) {
+      const op = r1((0.35 + 0.6 * near) * 100) / 100;
       code += `<rect x="${x}" y="${y}" width="${w}" height="5.5" rx="2.75" fill="${pick(palette)}" opacity="${op}"/>`;
-      placed.push({ x, y, w, h: 5.5 });
     }
-    x += w + 5 + (rand() < 0.15 ? 18 : 0);
+    x += w + 5 + (rand() < 0.15 ? 16 : 0);
   }
 }
 
@@ -186,9 +179,10 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" wid
   </mask>
   ${clips}
 </defs>
+<g filter="url(#glow)">${code}</g>
 <use href="#swirl" mask="url(#dissolve)"/>
 <g>${blocks}</g>
-<g filter="url(#glow)">${bars}${code}</g>
+<g filter="url(#glow)">${bars}</g>
 <g filter="url(#shadow)">
   <image href="${wrench}" x="${WX}" y="${WY}" width="${WS}" height="${WS}"/>
 </g>

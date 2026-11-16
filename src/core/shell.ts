@@ -1,3 +1,4 @@
+import logo from '../assets/logo-96.png';
 import css from './shell.css';
 import { iframeHosts, isSitePage, sendToProjectFrame } from './bridge';
 import type { Tool, ToolContext } from './tool';
@@ -21,6 +22,7 @@ declare global {
 
 const FRAME = `
 <div class="bar">
+  <img class="logo" alt="" width="20" height="20">
   <span class="title">WbSmUtil</span>
   <span class="where" title="Frame this window is running in"></span>
   <div class="actions"></div>
@@ -89,6 +91,7 @@ export function openShell(tools: Tool[]): void {
     on(host, type, (e) => e.stopPropagation());
   }
 
+  q<HTMLImageElement>('.bar .logo').src = logo;
   const bar = q('.bar');
   const statusEl = q('.status');
   const history: string[] = [];

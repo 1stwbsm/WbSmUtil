@@ -40,7 +40,7 @@ const common = {
   target: 'es2022',
   charset: 'utf8',
   legalComments: 'none',
-  loader: { '.css': 'text' },
+  loader: { '.css': 'text', '.png': 'dataurl' },
   write: false,
   logLevel: 'warning',
   define: { __VERSION__: JSON.stringify(pkg.version) },

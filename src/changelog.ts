@@ -8,6 +8,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.4.5',
+    date: '2026-11-16',
+    changes: [
+      'The WbSmUtil logo now shows in the window’s title bar and on the Home tab.',
+      'Logo refresh: the code lines sit behind the blocks and stay near the top-right corner.',
+    ],
+  },
+  {
     version: '0.4.4',
     date: '2026-11-16',
     changes: ['New logo, also used as the userscript icon in your userscript manager.'],
