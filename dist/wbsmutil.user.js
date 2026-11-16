@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         WbSmUtil
 // @namespace    wbsmutil
-// @version      0.2.0
-// @description  Dev toolkit userscript for websim projects. Alt+Shift+D toggles the panel inside a project frame.
+// @version      0.3.0
+// @description  Dev toolkit userscript for websim projects. Ctrl+` toggles the panel inside a project frame.
 // @match        https://websim.com/*
 // @match        https://*.websim.com/*
 // @match        https://websim.ai/*
@@ -814,6 +814,18 @@
         hub.hooks.set(name, "failed: " + errorMessage(error));
       }
     }
+  }
+
+  // src/core/hotkey.ts
+  var HOTKEY = {
+    ctrl: true,
+    alt: false,
+    shift: false,
+    code: "Backquote",
+    label: "Ctrl+`"
+  };
+  function isHotkey(e) {
+    return e.code === HOTKEY.code && e.ctrlKey === HOTKEY.ctrl && e.altKey === HOTKEY.alt && e.shiftKey === HOTKEY.shift && !e.metaKey && !e.repeat;
   }
 
   // src/core/shell.css
@@ -3320,7 +3332,7 @@
             class: "muted",
             text: "Websim runs each project inside an iframe on its own *.websim.com subdomain. WbSmUtil has to run inside that frame to reach the project’s websim, WebsimSocket and /api routes."
           }),
-          h("p", { text: "Use “⧉ Move into project frame” above, or click inside the project and press Alt+Shift+D." }),
+          h("p", { text: `Use “⧉ Move into project frame” above, or click inside the project and press ${HOTKEY.label}.` }),
           h("p", { class: "muted", text: hosts.length ? "Iframes on this page: " + hosts.join(", ") : "No iframes found on this page yet." })
         )
       );
@@ -3354,10 +3366,11 @@
     });
   }
   window.WbSmUtil = { open: () => void open(), close: closeShell, toggle: () => void toggle() };
+  console.info(`[WbSmUtil] loaded in ${location.host} (${site ? "websim page: forwards to project frame" : "project frame"}). ${HOTKEY.label} toggles.`);
   window.addEventListener(
     "keydown",
     (e) => {
-      if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey || e.code !== "KeyD" || e.repeat) return;
+      if (!isHotkey(e)) return;
       e.preventDefault();
       e.stopPropagation();
       void toggle();

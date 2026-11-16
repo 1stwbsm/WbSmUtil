@@ -11,7 +11,7 @@ npm run watch      # rebuild on change
 npm run typecheck
 ```
 
-**[Install](https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js)** (Tampermonkey or Violentmonkey; updates automatically), or build it and install `dist/wbsmutil.user.js`. Then open a project on websim.com, and press **Alt+Shift+D**. You can also run `WbSmUtil.open()` from the console.
+**[Install](https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js)** (Tampermonkey or Violentmonkey; updates automatically), or build it and install `dist/wbsmutil.user.js`. Then open a project on websim.com, and press **Ctrl+`** (backtick, the key left of 1). The shortcut is set in `src/core/hotkey.ts`. You can also run `WbSmUtil.open()` from the console.
 
 Websim shows each project inside an iframe on a `*.websim.com` subdomain. The script runs in both the websim.com page and the project iframe:
 

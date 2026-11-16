@@ -13,7 +13,7 @@ const header = `// ==UserScript==
 // @name         WbSmUtil
 // @namespace    wbsmutil
 // @version      ${pkg.version}
-// @description  ${pkg.description} Alt+Shift+D toggles the panel inside a project frame.
+// @description  ${pkg.description} Ctrl+\` toggles the panel inside a project frame.
 // @match        https://websim.com/*
 // @match        https://*.websim.com/*
 // @match        https://websim.ai/*
