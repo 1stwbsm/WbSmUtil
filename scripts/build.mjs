@@ -24,7 +24,8 @@ const header = `// ==UserScript==
 // @exclude      https://api.websim.com/*
 // @exclude      https://images.websim.com/*
 // @exclude      https://avatars.websim.com/*
-// @homepageURL  https://github.com/1stwbsm/WbSmUtil
+// @icon        https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/docs/img/icon-128.png
+// @homepageURL  https://1stwbsm.github.io/WbSmUtil/
 // @downloadURL  https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js
 // @updateURL    https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js
 // @grant        none

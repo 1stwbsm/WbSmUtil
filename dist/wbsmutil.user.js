@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WbSmUtil
 // @namespace    wbsmutil
-// @version      0.4.3
+// @version      0.4.4
 // @description  Dev toolkit userscript for websim projects. Ctrl+Backtick toggles the panel inside a project frame.
 // @match        https://websim.com/*
 // @match        https://*.websim.com/*
@@ -10,7 +10,8 @@
 // @exclude      https://api.websim.com/*
 // @exclude      https://images.websim.com/*
 // @exclude      https://avatars.websim.com/*
-// @homepageURL  https://github.com/1stwbsm/WbSmUtil
+// @icon        https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/docs/img/icon-128.png
+// @homepageURL  https://1stwbsm.github.io/WbSmUtil/
 // @downloadURL  https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js
 // @updateURL    https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js
 // @grant        none
@@ -2752,6 +2753,11 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
   // src/changelog.ts
   var CHANGELOG = [
     {
+      version: "0.4.4",
+      date: "2026-11-16",
+      changes: ["New logo, also used as the userscript icon in your userscript manager."]
+    },
+    {
       version: "0.4.3",
       date: "2026-11-16",
       changes: [
@@ -2849,7 +2855,7 @@ kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid
             "div",
             { class: "home-head" },
             h("h2", { text: "WbSmUtil" }),
-            h("span", { class: "badge", text: "v0.4.3" }),
+            h("span", { class: "badge", text: "v0.4.4" }),
             h("span", { class: "muted" }, "Toggle with ", h("kbd", { text: HOTKEY.label }), " · ", location.host)
           ),
           h(
@@ -2888,7 +2894,7 @@ kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid
           )
         )
       );
-      ctx.status(`WbSmUtil v${"0.4.3"} ready.`);
+      ctx.status(`WbSmUtil v${"0.4.4"} ready.`);
     }
   };
 

@@ -8,6 +8,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.4.4',
+    date: '2026-11-16',
+    changes: ['New logo, also used as the userscript icon in your userscript manager.'],
+  },
+  {
     version: '0.4.3',
     date: '2026-11-16',
     changes: [

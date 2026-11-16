@@ -1,3 +1,5 @@
+<img src="docs/img/logo.png" alt="WbSmUtil logo" width="128" align="right">
+
 # WbSmUtil
 
 Dev toolkit userscript for websim projects. **[Docs and demo](https://1stwbsm.github.io/WbSmUtil/)**
