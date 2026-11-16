@@ -1,0 +1,108 @@
+.pane.db { flex-direction: row; }
+.db .side {
+  width: 150px;
+  min-width: 105px;
+  max-width: 30%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #38414b;
+}
+.db .names { flex: 1; overflow: auto; padding: 4px; }
+.db .names button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+  padding: 5px 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.db .names button.active { background: #3c4c37; color: #d6e8cb; }
+.db .names button:hover { background: #313c44; }
+.db .manual { display: flex; margin: 5px; gap: 3px; }
+.db .manual input {
+  width: 0;
+  flex: 1;
+  background: #15191e;
+  border: 1px solid #424a53;
+  padding: 4px;
+  font: 11px monospace;
+  min-width: 0;
+}
+.db .manual button { padding: 3px 6px; }
+
+.db .view { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+.db .tools { display: flex; gap: 8px; align-items: center; padding: 6px; border-bottom: 1px solid #38414b; }
+.db .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; font-weight: 600; }
+.db .filter {
+  min-width: 30px;
+  width: 120px;
+  margin-left: auto;
+  background: #15191e;
+  border: 1px solid #424a53;
+  padding: 4px;
+  font-size: 11px;
+}
+.db .records { flex: 1; overflow: auto; }
+.db .empty { white-space: pre-wrap; color: #9ca8b3; padding: 12px; font-size: 11px; line-height: 1.6; }
+
+.db table {
+  border-collapse: collapse;
+  white-space: nowrap;
+  min-width: 100%;
+  font: 11px/1.5 ui-monospace, monospace;
+  text-align: left;
+}
+.db th { position: sticky; top: 0; background: #29313a; color: #aab6c3; font-weight: 400; }
+.db th, .db td {
+  padding: 6px 9px;
+  border-bottom: 1px solid #303841;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.db tbody tr { cursor: pointer; }
+.db tbody tr:hover { background: #29362b; }
+.db td { color: #c4d2bd; }
+
+.db .panel {
+  position: absolute;
+  inset: 0;
+  background: #1c2025;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 7px;
+}
+.db .panel-head { display: flex; gap: 8px; align-items: center; }
+.db .panel-head strong { margin-right: auto; font-size: 12px; }
+.db .panel textarea {
+  background: #14191d;
+  border: 1px solid #424a53;
+  padding: 9px;
+  font: 11px/1.5 ui-monospace, monospace;
+  flex: 1;
+  resize: none;
+  min-height: 0;
+  white-space: pre;
+}
+.db .panel pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow: auto;
+  flex: 1;
+  color: #c4d2bd;
+  font: 11px/1.6 ui-monospace, monospace;
+}
+.db .entry-status { font-size: 11px; white-space: pre-wrap; color: #f0b3a9; }
+.db .save { align-self: flex-end; background: #3c4c37; color: #d6e8cb; }
+.db .hint { font-size: 10px; color: #9ca8b3; }
+.page { white-space: nowrap; color: #929faa; }
+
+@media (max-width: 500px) {
+  .db .side { width: 110px; }
+  .db .filter { width: 70px; }
+}

@@ -1,0 +1,15 @@
+.chat { flex: 1; }
+.chat > .split-v { flex: 1; }
+.chat-side { width: 260px; flex: none; border-left: 1px solid #303841; }
+.chat-log { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.composer { border-top: 1px solid #303841; align-items: stretch; flex-wrap: nowrap; }
+.composer textarea { resize: none; }
+.msg { border: 1px solid #303841; border-radius: 4px; padding: 6px 8px; background: #20262c; }
+.msg .role { font-size: 10px; color: #8c98a4; text-transform: uppercase; letter-spacing: .04em; }
+.msg .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-user { background: #232b33; align-self: flex-end; max-width: 85%; }
+.msg-assistant { background: #222a22; max-width: 95%; }
+.msg-error { border-color: #6d4741; color: #f0b3a9; }
+img.gen { max-width: 100%; max-height: 320px; border-radius: 4px; display: block; background: repeating-conic-gradient(#2a3037 0 25%, #20252b 0 50%) 0 0 / 16px 16px; }
+details summary { cursor: pointer; color: #aab6c3; }
+@media (max-width: 600px) { .chat-side { width: auto; border-left: 0; border-top: 1px solid #303841; max-height: 40%; } }

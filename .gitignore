@@ -1,0 +1,8 @@
+node_modules/
+.shit/
+.claude/
+# saved websim pages contain account data and tokens
+websimref.html
+websimref_files/
+*.html
+!src/**/*.html

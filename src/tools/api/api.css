@@ -1,0 +1,7 @@
+.api { flex: 1; }
+.api-req { width: 46%; flex: none; border-right: 1px solid #303841; }
+.api-resp { flex: 1; }
+.resp-status { min-height: 24px; }
+.pad-x { padding: 0 8px; }
+.api-resp pre.json { font-size: 11px; }
+@media (max-width: 600px) { .api-req { width: auto; border-right: 0; border-bottom: 1px solid #303841; max-height: 55%; } }
