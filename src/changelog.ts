@@ -8,6 +8,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.4.3',
+    date: '2026-11-16',
+    changes: [
+      'Fixed the API Traffic log going quiet after page load: websim replaces window.fetch, which bypassed the hook. Later replacements are now wrapped too, and each request is still logged once.',
+      'New docs and demo site: https://1stwbsm.github.io/WbSmUtil/',
+    ],
+  },
+  {
     version: '0.4.2',
     date: '2026-11-16',
     changes: [

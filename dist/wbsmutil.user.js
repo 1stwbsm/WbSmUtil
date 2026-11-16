@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WbSmUtil
 // @namespace    wbsmutil
-// @version      0.4.2
+// @version      0.4.3
 // @description  Dev toolkit userscript for websim projects. Ctrl+Backtick toggles the panel inside a project frame.
 // @match        https://websim.com/*
 // @match        https://*.websim.com/*
@@ -407,10 +407,10 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
     if (body instanceof ArrayBuffer || ArrayBuffer.isView(body)) return `[binary ${body.byteLength} bytes]`;
     return "[" + (body.constructor?.name ?? "body") + "]";
   }
-  function installFetchHook() {
-    const original = window.fetch;
-    if (isPatched(original)) return;
-    window.fetch = mark(function(...args) {
+  var fetchDepth = 0;
+  function wrapFetch(original) {
+    return mark(function(...args) {
+      if (fetchDepth > 0) return original.apply(this, args);
       const [input, init] = args;
       let entry = null;
       const started = performance.now();
@@ -430,7 +430,13 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
         });
       } catch {
       }
-      const promise = original.apply(this, args);
+      let promise;
+      fetchDepth++;
+      try {
+        promise = original.apply(this, args);
+      } finally {
+        fetchDepth--;
+      }
       if (entry) {
         const e = entry;
         promise.then(
@@ -465,6 +471,25 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
       }
       return promise;
     }, original);
+  }
+  function installFetchHook() {
+    if (isPatched(window.fetch)) return;
+    let current = wrapFetch(window.fetch);
+    let replaced = 0;
+    try {
+      Object.defineProperty(window, "fetch", {
+        configurable: true,
+        enumerable: true,
+        get: () => current,
+        set(value) {
+          if (typeof value !== "function") return;
+          current = isPatched(value) ? value : wrapFetch(value);
+          hub.hooks.set("fetch", `installed (page replaced fetch ${++replaced}×, re-wrapped)`);
+        }
+      });
+    } catch {
+      window.fetch = current;
+    }
     hub.hooks.set("fetch", "installed");
   }
   function shortUrl(url) {
@@ -2727,6 +2752,14 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
   // src/changelog.ts
   var CHANGELOG = [
     {
+      version: "0.4.3",
+      date: "2026-11-16",
+      changes: [
+        "Fixed the API Traffic log going quiet after page load: websim replaces window.fetch, which bypassed the hook. Later replacements are now wrapped too, and each request is still logged once.",
+        "New docs and demo site: https://1stwbsm.github.io/WbSmUtil/"
+      ]
+    },
+    {
       version: "0.4.2",
       date: "2026-11-16",
       changes: [
@@ -2816,7 +2849,7 @@ kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid
             "div",
             { class: "home-head" },
             h("h2", { text: "WbSmUtil" }),
-            h("span", { class: "badge", text: "v0.4.2" }),
+            h("span", { class: "badge", text: "v0.4.3" }),
             h("span", { class: "muted" }, "Toggle with ", h("kbd", { text: HOTKEY.label }), " · ", location.host)
           ),
           h(
@@ -2855,7 +2888,7 @@ kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid
           )
         )
       );
-      ctx.status(`WbSmUtil v${"0.4.2"} ready.`);
+      ctx.status(`WbSmUtil v${"0.4.3"} ready.`);
     }
   };
 

@@ -1,6 +1,8 @@
 # WbSmUtil
 
-Dev toolkit userscript for websim projects.
+Dev toolkit userscript for websim projects. **[Docs and demo](https://1stwbsm.github.io/WbSmUtil/)**
+
+![WbSmUtil open inside a websim project](docs/img/hero.png)
 
 ## Install and use
 

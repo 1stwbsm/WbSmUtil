@@ -6,3 +6,4 @@ websimref.html
 websimref_files/
 *.html
 !src/**/*.html
+!docs/**

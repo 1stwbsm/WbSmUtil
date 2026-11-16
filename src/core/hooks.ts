@@ -98,10 +98,12 @@ function describeBody(body: unknown): string | undefined {
   return '[' + ((body as object).constructor?.name ?? 'body') + ']';
 }
 
-export function installFetchHook(): void {
-  const original = window.fetch;
-  if (isPatched(original)) return;
-  window.fetch = mark(function (this: unknown, ...args: unknown[]) {
+/** >0 while a logging fetch wrapper is on the stack: nested wrappers pass through. */
+let fetchDepth = 0;
+
+function wrapFetch(original: AnyFn): typeof fetch {
+  return mark(function (this: unknown, ...args: unknown[]) {
+    if (fetchDepth > 0) return original.apply(this, args);
     const [input, init] = args as [RequestInfo | URL, RequestInit | undefined];
     let entry: LogEntry | null = null;
     const started = performance.now();
@@ -122,7 +124,13 @@ export function installFetchHook(): void {
     } catch {
       // ignore
     }
-    const promise = (original as AnyFn).apply(this, args) as Promise<Response>;
+    let promise: Promise<Response>;
+    fetchDepth++;
+    try {
+      promise = original.apply(this, args) as Promise<Response>;
+    } finally {
+      fetchDepth--;
+    }
     if (entry) {
       const e = entry;
       promise.then(
@@ -157,7 +165,33 @@ export function installFetchHook(): void {
       );
     }
     return promise;
-  }, original as AnyFn) as typeof fetch;
+  }, original) as typeof fetch;
+}
+
+/**
+ * Wrap window.fetch, and keep it wrapped: platforms (websim included) replace
+ * window.fetch with their own after page start, which would silently bypass a
+ * one-time wrapper. An accessor wraps every later replacement too; the depth
+ * counter keeps a request that passes through several wrappers logged once.
+ */
+export function installFetchHook(): void {
+  if (isPatched(window.fetch)) return;
+  let current = wrapFetch(window.fetch as unknown as AnyFn);
+  let replaced = 0;
+  try {
+    Object.defineProperty(window, 'fetch', {
+      configurable: true,
+      enumerable: true,
+      get: () => current,
+      set(value: unknown) {
+        if (typeof value !== 'function') return;
+        current = isPatched(value) ? (value as typeof fetch) : wrapFetch(value as AnyFn);
+        hub.hooks.set('fetch', `installed (page replaced fetch ${++replaced}×, re-wrapped)`);
+      },
+    });
+  } catch {
+    window.fetch = current;
+  }
   hub.hooks.set('fetch', 'installed');
 }
 

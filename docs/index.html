@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WbSmUtil</title>
+<meta name="description" content="A dev toolkit userscript for websim projects: database, API, multiplayer packets, AI, comments, console and storage tools inside the project frame.">
+<style>
+  :root {
+    --bg: #f5f6f4;
+    --surface: #ffffff;
+    --surface-2: #eceeea;
+    --text: #1e2328;
+    --muted: #5d6873;
+    --border: #d5d9d3;
+    --accent: #4d6e40;
+    --accent-ink: #ffffff;
+    --accent-soft: #e2ebdc;
+    --code-bg: #eceeea;
+    --win: #1c2025;
+    --win-bar: #292f36;
+    --win-tabs: #22272d;
+    --win-border: #48515b;
+    --win-text: #c6cdd4;
+    --win-muted: #8c98a4;
+    --shadow: 0 18px 50px rgba(20, 30, 20, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171b;
+      --surface: #1c2025;
+      --surface-2: #232930;
+      --text: #e3e7eb;
+      --muted: #9aa5b0;
+      --border: #333b44;
+      --accent: #a7c38d;
+      --accent-ink: #14200f;
+      --accent-soft: #263321;
+      --code-bg: #232930;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171b;
+    --surface: #1c2025;
+    --surface-2: #232930;
+    --text: #e3e7eb;
+    --muted: #9aa5b0;
+    --border: #333b44;
+    --accent: #a7c38d;
+    --accent-ink: #14200f;
+    --accent-soft: #263321;
+    --code-bg: #232930;
+    --shadow: 0 18px 50px rgba(0, 0, 0, .45);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  a { color: var(--accent); }
+  code, kbd { font: .88em ui-monospace, "SFMono-Regular", Menlo, monospace; }
+  code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; }
+  kbd { background: var(--surface); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: .05em .4em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 14px/1.55 ui-monospace, Menlo, monospace; }
+  pre code { background: none; padding: 0; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+  header.top { border-bottom: 1px solid var(--border); background: var(--surface); }
+  header.top .wrap { display: flex; align-items: center; gap: 16px; height: 56px; }
+  .brand { font-weight: 700; letter-spacing: -.01em; color: var(--text); text-decoration: none; }
+  nav.links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
+  nav.links a { color: var(--muted); text-decoration: none; }
+  nav.links a:hover { color: var(--text); }
+
+  .hero { padding: 56px 0 28px; }
+  .hero h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.05; margin: 0 0 14px; letter-spacing: -.02em; }
+  .hero p.lede { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 640px; margin: 0 0 24px; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--text); background: var(--surface); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .cta .note { color: var(--muted); font-size: 14px; }
+
+  /* Demo window: a mock of the real WbSmUtil chrome around real screenshots. */
+  .demo { margin: 28px 0 8px; }
+  .win { background: var(--win); border: 1px solid var(--win-border); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); color: var(--win-text); }
+  .win-bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--win-bar); border-bottom: 1px solid #424a53; font-size: 13px; }
+  .win-bar b { color: #eef0f3; }
+  .win-bar span { color: var(--win-muted); font-size: 12px; }
+  .win-tabs { display: flex; gap: 2px; padding: 4px 8px 0; background: var(--win-tabs); border-bottom: 1px solid #38414b; overflow-x: auto; scrollbar-width: thin; }
+  .win-tabs button { font: inherit; font-size: 13px; color: var(--win-muted); background: transparent; border: 1px solid transparent; border-bottom: 0; border-radius: 4px 4px 0 0; padding: 6px 12px 7px; cursor: pointer; white-space: nowrap; }
+  .win-tabs button:hover { color: #eef0f3; }
+  .win-tabs button[aria-selected="true"] { background: var(--win); border-color: #38414b; color: #eef0f3; margin-bottom: -1px; }
+  .win-tabs button:focus-visible { outline: 2px solid #a7c38d; outline-offset: -2px; }
+  .win-body { display: grid; grid-template-columns: minmax(0, 1fr) 280px; }
+  .win-shot { background: #111418; display: flex; align-items: flex-start; justify-content: center; min-height: 200px; }
+  .win-shot img { width: 100%; height: auto; display: block; }
+  .win-info { padding: 18px; border-left: 1px solid #303841; font-size: 14px; line-height: 1.55; }
+  .win-info h3 { margin: 0 0 8px; color: #eef0f3; font-size: 17px; }
+  .win-info ul { margin: 10px 0 0; padding-left: 18px; color: #b7c0c8; }
+  .win-info li { margin: 4px 0; }
+  .win-info code { background: #2a3037; color: #d6e8cb; }
+  .demo-caption { color: var(--muted); font-size: 13px; margin: 10px 2px 0; }
+
+  section { padding: 40px 0; border-top: 1px solid var(--border); }
+  section h2 { font-size: 28px; margin: 0 0 18px; letter-spacing: -.01em; }
+  section h3 { font-size: 19px; margin: 28px 0 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  .steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px 14px 56px; position: relative; }
+  .steps li::before { content: counter(s); position: absolute; left: 16px; top: 13px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+  .callout { background: var(--accent-soft); border-radius: 10px; padding: 14px 16px; margin: 16px 0; }
+  table.ref { width: 100%; border-collapse: collapse; font-size: 15px; }
+  table.ref th, table.ref td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.ref th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+  table.ref td:first-child { font-weight: 600; white-space: nowrap; }
+  footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
+
+  @media (max-width: 820px) {
+    .win-body { grid-template-columns: 1fr; }
+    .win-info { border-left: 0; border-top: 1px solid #303841; }
+    nav.links { display: none; }
+  }
+  @media (max-width: 520px) {
+    table.ref td:first-child { white-space: normal; }
+    .hero { padding-top: 36px; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">WbSmUtil</a>
+    <nav class="links" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#docs">Docs</a>
+      <a href="#develop">Develop</a>
+      <a href="https://github.com/1stwbsm/WbSmUtil">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <h1>Devtools for websim projects.</h1>
+    <p class="lede">WbSmUtil is a userscript that opens a toolkit window inside any websim project: browse databases, call your <code>/api</code> routes, sniff multiplayer packets, test AI calls, and more.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js">Install userscript</a>
+      <a class="btn" href="https://github.com/1stwbsm/WbSmUtil">Source on GitHub</a>
+      <span class="note">Needs Violentmonkey or Tampermonkey. Opens with <kbd>Ctrl</kbd> + <kbd>`</kbd>.</span>
+    </div>
+
+    <div class="demo" aria-label="Interactive tour of the WbSmUtil window">
+      <div class="win">
+        <div class="win-bar"><b>WbSmUtil</b><span>7tx9zs9vkfka8xtzwabt.c.websim.com</span></div>
+        <div class="win-tabs" role="tablist" aria-label="WbSmUtil tabs" id="tabs"></div>
+        <div class="win-body">
+          <div class="win-shot"><img id="shot" src="img/hero.png" alt="" width="1960" height="1400"></div>
+          <div class="win-info" id="info" aria-live="polite"></div>
+        </div>
+      </div>
+      <p class="demo-caption">Click the tabs to tour the real thing. Every image is a screenshot of WbSmUtil running in Firefox on a live websim project, <a href="https://websim.com/@1st/slug">@1st/slug</a>. This page is only a tour: nothing here runs the userscript.</p>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>What it does</h2>
+      <div class="grid">
+        <div class="card"><h3>Runs where your project runs</h3><p>Websim puts each project in an iframe on its own <code>*.c.websim.com</code> subdomain. WbSmUtil opens inside that frame, so it has the same <code>websim</code>, <code>WebsimSocket</code> and <code>/api</code> access as your code.</p></div>
+        <div class="card"><h3>Sees what happened before you opened it</h3><p>Hooks start at page load, so the logs already include the project's first requests, packets, AI calls and console errors.</p></div>
+        <div class="card"><h3>Hands off your page</h3><p>Every hook calls the original unchanged. WbSmUtil never creates a room or connection on its own, and closing the window stops all of its work.</p></div>
+        <div class="card"><h3>Isolated UI</h3><p>The window lives in a shadow root above the page, so your project's CSS and key handlers can't reach it, and it can't reach theirs.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <ol class="steps">
+        <li>Install a userscript manager: <a href="https://violentmonkey.github.io/">Violentmonkey</a> (Firefox, Chrome) or <a href="https://www.tampermonkey.net/">Tampermonkey</a>.</li>
+        <li>Open the <a href="https://raw.githubusercontent.com/1stwbsm/WbSmUtil/main/dist/wbsmutil.user.js">install link</a> and confirm. Updates come automatically from GitHub.</li>
+        <li>Open any websim project, click inside it, and press <kbd>Ctrl</kbd> + <kbd>`</kbd> (the key left of <kbd>1</kbd>). You can also run <code>WbSmUtil.open()</code> in the console.</li>
+      </ol>
+      <div class="callout"><strong>Firefox and Violentmonkey:</strong> websim's Content-Security-Policy blocks the normal way userscripts get into the page. WbSmUtil handles that itself: it falls back to a content script and re-injects with the page's script nonce. You don't need to change any settings. One red "blocked an inline script" console message per page is expected.</div>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="wrap">
+      <h2>Docs</h2>
+      <h3>Opening the window</h3>
+      <p>Press <kbd>Ctrl</kbd> + <kbd>`</kbd> while focus is anywhere on a websim project page. If focus is on websim.com around the project, the shortcut is passed into the project frame. If the window ever opens on websim.com itself, use <strong>⧉ Move into project frame</strong> in its title bar.</p>
+      <p>Each frame the script runs in logs a line such as <code>[WbSmUtil] loaded in &lt;id&gt;.c.websim.com</code>. If there's no line for the project frame, the script isn't running there.</p>
+
+      <h3>Tabs</h3>
+      <table class="ref">
+        <thead><tr><th>Tab</th><th>What it's for</th></tr></thead>
+        <tbody>
+          <tr><td>Home</td><td>Version, status badges (websim API, WebsimSocket, room, frame), shortcuts to every tab, and the changelog.</td></tr>
+          <tr><td>Database</td><td>Legacy <code>room.collection()</code> databases: finds collections in records and source, pages through records, and creates entries from an inferred template. Only uses a room the page already has.</td></tr>
+          <tr><td>API</td><td>Request builder for your <code>/api/*</code> routes. Requests carry your real <code>x-websim-*</code> identity headers. Also: 21 presets for the public websim API, saved requests, a log of every <code>fetch</code> with replay, and route discovery from the public <code>server.js</code>.</td></tr>
+          <tr><td>Multiplayer</td><td>Packet log for <code>WebsimSocket.joinRoom()</code> rooms and legacy sockets: in ↓, out ↑. Send packets as you, deliver fake incoming packets to your <code>onmessage</code>, replay logged ones, and inspect legacy presence and roomState.</td></tr>
+          <tr><td>AI</td><td>Monitor for <code>websim.chat</code>, <code>imageGen</code>, <code>textToSpeech</code> and agent calls (arguments, results, errors, timing), plus chat, image and speech playgrounds.</td></tr>
+          <tr><td>Comments</td><td>Browse and search with every <code>getComments</code> filter, react, follow live <code>comment:created</code> events, and post comments or replies.</td></tr>
+          <tr><td>Project</td><td>Frame and hook status, project / viewer / creator identity, notification permission, <code>websim.upload</code>, the users API, and a log of every <code>websim.*</code> call.</td></tr>
+          <tr><td>Console</td><td>The project's <code>console.*</code> output, uncaught errors and rejections, plus a JavaScript runner in the project frame (<code>await</code> works).</td></tr>
+          <tr><td>Storage</td><td>localStorage and sessionStorage editor, read-only IndexedDB browser, cookies.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Log filters</h3>
+      <p>Every log has a filter box. Space-separated words must all match, and a leading <code>-</code> excludes: <code>-snapshot -ping</code> hides the noisy packets. <strong>Pause</strong> freezes the list without losing entries. Click a row to see its full detail, and to Copy, Replay or Open it in the builder.</p>
+
+      <h3>What it changes on the page</h3>
+      <p>WbSmUtil wraps <code>console</code>, <code>fetch</code>, the <code>websim</code> methods and room <code>send</code>/<code>onmessage</code>, always calling the original with the same arguments. If the page replaces <code>fetch</code> later (websim does), the new one is wrapped too. A room with no <code>onmessage</code> gets a log-only handler, which reads as <code>null</code> to the page. Streamed AI responses are logged as calls, but their chunks aren't captured.</p>
+    </div>
+  </section>
+
+  <section id="develop">
+    <div class="wrap">
+      <h2>Develop</h2>
+      <p>TypeScript, bundled by esbuild into one userscript.</p>
+<pre><code>git clone https://github.com/1stwbsm/WbSmUtil
+cd WbSmUtil
+npm install
+npm run build      # dist/wbsmutil.user.js
+npm run watch      # rebuild on change</code></pre>
+      <h3>Adding a tab</h3>
+      <p>Create <code>src/tools/&lt;name&gt;/index.ts</code> exporting a <code>Tool</code> (<code>id</code>, <code>label</code>, optional <code>css</code>, <code>mount(ctx)</code>) and list it in <code>src/tools/index.ts</code>. <code>mount</code> runs the first time the tab opens. Use <code>ctx.on</code>, <code>ctx.wait</code> and <code>ctx.signal</code> so your listeners and requests stop when the window closes. For data captured from page load onward, add a hook in <code>src/core/hooks.ts</code> that writes to a <code>hub</code> channel, and show it with <code>logView()</code>.</p>
+      <h3>Layout</h3>
+<pre><code>src/loader.ts          gets the code into the page world (CSP nonce re-injection)
+src/main.ts            entry: site page vs project frame, hotkey
+src/core/bridge.ts     websim.com ↔ project iframe messaging
+src/core/hooks.ts      console, fetch, websim.*, WebsimSocket hooks
+src/core/shell.ts      the window, tabs, status line
+src/core/logview.ts    reusable live log
+src/tools/&lt;name&gt;/     one folder per tab
+src/changelog.ts       shown on the Home tab</code></pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">WbSmUtil by <a href="https://websim.com/@1st">@1st</a> · <a href="https://github.com/1stwbsm/WbSmUtil">GitHub</a> · Not affiliated with websim.</div>
+</footer>
+
+<script>
+  // Tour: each tab swaps in a real screenshot of that tab and a short note.
+  const TOUR = [
+    { id: 'home', label: 'Home', img: 'img/hero.png', alt: 'WbSmUtil open over a websim project, on its Home tab',
+      title: 'Opens right inside your project',
+      text: 'Press Ctrl+` in a websim project. Home shows what the page has (websim API, WebsimSocket, a room) and links to every tab.',
+      points: ['Status badges at a glance', 'Shortcuts to every tab', 'Built-in changelog'] },
+    { id: 'api', label: 'API', img: 'img/api-request.png', alt: 'API tab: a GET request to the websim users API with its JSON response',
+      title: 'Call any route, see the answer',
+      text: 'The builder sends requests from inside the project frame, so your /api routes get your real identity headers.',
+      points: ['Status, timing and pretty-printed JSON', 'Copy the body or a ready-made fetch() call', 'Save requests for later'] },
+    { id: 'presets', label: 'API · Presets', img: 'img/api-presets.png', alt: 'API Presets list grouped by This project, Creator, You and Comments',
+      title: '21 ready-made requests',
+      text: 'The public websim API and templates for your own routes. The creator, your account and the project ID are filled in automatically.',
+      points: ['server.js source and /api templates', 'Creator and viewer profile, stats, followers', 'Comments by sort, tips, video, search'] },
+    { id: 'traffic', label: 'API · Traffic', img: 'img/api-traffic.png', alt: 'Traffic log listing fetch requests with status and timing',
+      title: 'Every request the page makes',
+      text: 'All fetch() calls since page load, including websim’s own. Click a row to see headers and body, or reopen it in the builder.',
+      points: ['Keeps working when the page replaces fetch', 'Filter with words, exclude with -word', 'Replay as a new request'] },
+    { id: 'multiplayer', label: 'Multiplayer', img: 'img/multiplayer.png', alt: 'Multiplayer tab with packet log and composer',
+      title: 'Read and write room packets',
+      text: 'Logs what the page sends (↑) and receives (↓) on its room. This project has no room, so the log is empty here.',
+      points: ['Send packets as you', 'Fake incoming packets to test handlers', 'Legacy presence and roomState viewer'] },
+    { id: 'ai', label: 'AI', img: 'img/ai-chat.png', alt: 'AI tab chat playground with system prompt, JSON, stream and schema options',
+      title: 'AI calls, monitored and testable',
+      text: 'The monitor logs every chat, image, speech and agent call the project makes. Playgrounds let you try prompts against the same APIs.',
+      points: ['Chat with system prompt, JSON, schema, stream', 'Image generation with aspect, seed, inputs', 'Text to speech with voices'] },
+    { id: 'comments', label: 'Comments', img: 'img/comments.png', alt: 'Comments tab listing comments filtered by author 1st',
+      title: 'Comments without leaving the project',
+      text: 'Every getComments filter, reactions, replies and posting. The live view shows comment:created events as they arrive.',
+      points: ['Search, sort, tips, video, author', 'React and reply from the list', 'Raw JSON for each comment'] },
+    { id: 'project', label: 'Project', img: 'img/project.png', alt: 'Project tab showing frame details and hook status',
+      title: 'What the page can see',
+      text: 'Frame origin, the full window.websim API surface, hook status, identity cards, notification permission and uploads.',
+      points: ['Which hooks are live', 'Viewer and creator identity', 'Log of every websim.* call'] },
+    { id: 'console', label: 'Console', img: 'img/console.png', alt: 'Console tab with evaluated expressions and results',
+      title: 'A console in the project frame',
+      text: 'The project’s logs and errors since page load, plus a JavaScript runner in the frame’s own scope. await works.',
+      points: ['Uncaught errors and rejections', 'Level filter and search', 'Up/down for history'] },
+    { id: 'storage', label: 'Storage', img: 'img/storage.png', alt: 'Storage tab listing localStorage keys with an editor',
+      title: 'Saves and settings, editable',
+      text: 'Edit the project’s localStorage and sessionStorage, browse IndexedDB, and read cookies.',
+      points: ['JSON pretty-printed for editing', 'Add, delete, clear', 'IndexedDB stores and records'] },
+  ];
+
+  const tabs = document.getElementById('tabs');
+  const shot = document.getElementById('shot');
+  const info = document.getElementById('info');
+
+  function show(item, focus) {
+    for (const b of tabs.children) {
+      const on = b.dataset.id === item.id;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+      if (on && focus) b.focus();
+    }
+    shot.src = item.img;
+    shot.alt = item.alt;
+    const h = document.createElement('h3');
+    h.textContent = item.title;
+    const p = document.createElement('p');
+    p.textContent = item.text;
+    const ul = document.createElement('ul');
+    for (const t of item.points) {
+      const li = document.createElement('li');
+      li.textContent = t;
+      ul.append(li);
+    }
+    info.replaceChildren(h, p, ul);
+  }
+
+  TOUR.forEach((item, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.role = 'tab';
+    b.dataset.id = item.id;
+    b.textContent = item.label;
+    b.addEventListener('click', () => show(item));
+    b.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      show(TOUR[(i + d + TOUR.length) % TOUR.length], true);
+    });
+    tabs.append(b);
+  });
+  // Preload so switching tabs is instant.
+  for (const item of TOUR) new Image().src = item.img;
+  show(TOUR[0]);
+</script>
+</body>
+</html>
