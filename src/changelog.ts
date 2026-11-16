@@ -8,6 +8,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.4.2',
+    date: '2026-11-16',
+    changes: [
+      'API tab: new Presets list with 21 ready-made requests (this project, creator, you, comments). Creator, viewer and project IDs are filled in automatically.',
+      'API tab: the websim API buttons moved from Routes into Presets.',
+      'Project tab: when you’re viewing your own project, the viewer and creator cards merge into one.',
+    ],
+  },
+  {
     version: '0.4.1',
     date: '2026-11-16',
     changes: ['New Home tab with this changelog. The window now opens here instead of on Database.'],

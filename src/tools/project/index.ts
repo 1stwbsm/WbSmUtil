@@ -70,33 +70,52 @@ function overviewView(ctx: ToolContext, root: HTMLElement): void {
     hooks.replaceChildren(kv([...hub.hooks.entries()]));
   }
 
-  async function card(title: string, key: 'getCurrentProject' | 'getCurrentUser' | 'getCreator'): Promise<HTMLElement> {
+  type Result = { value: Record<string, unknown> } | { error: unknown };
+
+  async function fetchIdentity(key: 'getCurrentProject' | 'getCurrentUser' | 'getCreator'): Promise<Result> {
     try {
-      const value = await ctx.wait(requireWebsim(key)(), 15000);
-      const username = value.username as string | undefined;
-      const extra: [string, unknown][] = [];
-      if (key === 'getCurrentUser' && value.id === '1') extra.push(['note', 'signed out (id "1")']);
-      if (key === 'getCurrentProject') extra.push(['link', `https://websim.com/p/${String(value.id)}`]);
-      return h(
-        'div',
-        { class: 'p-card stack' },
-        h('div', { class: 'who' }, avatar(username), h('strong', { text: title }), h('span', { class: 'muted', text: String(username ?? value.title ?? value.id ?? '') })),
-        extra.length ? kv(extra) : null,
-        h('div', { class: 'box' }, jsonBlock(value)),
-      );
+      return { value: await ctx.wait(requireWebsim(key)(), 15000) };
     } catch (error) {
-      return h('div', { class: 'p-card' }, h('strong', { text: title }), h('div', { class: 'error-text', text: errorMessage(error) }));
+      return { error };
     }
+  }
+
+  function card(title: string, result: Result, extra: [string, unknown][] = [], json?: unknown): HTMLElement {
+    if ('error' in result) {
+      return h('div', { class: 'p-card' }, h('strong', { text: title }), h('div', { class: 'error-text', text: errorMessage(result.error) }));
+    }
+    const { value } = result;
+    const username = value.username as string | undefined;
+    return h(
+      'div',
+      { class: 'p-card stack' },
+      h('div', { class: 'who' }, avatar(username), h('strong', { text: title }), h('span', { class: 'muted', text: String(username ?? value.title ?? value.id ?? '') })),
+      extra.length ? kv(extra) : null,
+      h('div', { class: 'box' }, jsonBlock(json ?? value)),
+    );
   }
 
   async function loadIdentity(): Promise<void> {
     identity.replaceChildren(h('div', { class: 'muted', text: 'Loading…' }));
-    const cards = await Promise.all([
-      card('Project', 'getCurrentProject'),
-      card('You (viewer)', 'getCurrentUser'),
-      card('Creator', 'getCreator'),
+    const [project, viewer, creator] = await Promise.all([
+      fetchIdentity('getCurrentProject'),
+      fetchIdentity('getCurrentUser'),
+      fetchIdentity('getCreator'),
     ]);
-    if (!ctx.stopped()) identity.replaceChildren(...cards);
+    if (ctx.stopped()) return;
+    const cards: HTMLElement[] = [
+      card('Project', project, 'value' in project ? [['link', `https://websim.com/p/${String(project.value.id)}`]] : []),
+    ];
+    const viewerId = 'value' in viewer ? viewer.value.id : undefined;
+    const creatorId = 'value' in creator ? creator.value.id : undefined;
+    if (viewerId !== undefined && viewerId !== '1' && viewerId === creatorId && 'value' in creator) {
+      // Viewing your own project: one card. Show both objects only if they differ.
+      const same = JSON.stringify(viewer) === JSON.stringify(creator);
+      cards.push(card('You (viewer & creator)', viewer, [['role', 'you created this project']], same ? undefined : { viewer: (viewer as { value: unknown }).value, creator: creator.value }));
+    } else {
+      cards.push(card('You (viewer)', viewer, viewerId === '1' ? [['note', 'signed out (id "1")']] : []), card('Creator', creator));
+    }
+    identity.replaceChildren(...cards);
   }
 
   async function notifCall(kind: 'getPermission' | 'requestPermission' | 'revokePermission'): Promise<void> {

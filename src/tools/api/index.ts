@@ -4,8 +4,8 @@ import { logView } from '../../core/logview';
 import { crawlSources } from '../../core/source';
 import type { Tool, ToolContext } from '../../core/tool';
 import { copyText, errorMessage, h, pretty, subtabs, tryParse } from '../../core/ui';
-import { getWebsim } from '../../core/websim';
 import css from './api.css';
+import { fillPreset, PRESETS, presetVars, type Preset, type PresetVars } from './presets';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'];
 const SAVED_KEY = 'wbsmutil:requests';
@@ -29,9 +29,20 @@ export const apiTool: Tool = {
     const requestEl = h('div');
     const trafficEl = h('div');
     const routesEl = h('div');
+    const presetsEl = h('div');
     const builder = requestBuilder(ctx, requestEl);
     const select = subtabs(ctx.pane, [
       { id: 'request', label: 'Request', el: requestEl },
+      {
+        id: 'presets',
+        label: 'Presets',
+        el: presetsEl,
+        init: () =>
+          presetsView(ctx, presetsEl, (spec) => {
+            builder.load(spec);
+            select('request');
+          }),
+      },
       {
         id: 'traffic',
         label: 'Traffic',
@@ -350,43 +361,76 @@ function routesView(ctx: ToolContext, root: HTMLElement, open: (spec: RequestSpe
     }
   }
 
-  // websim's public read API (CORS open to project pages).
-  const presets = h('div', { class: 'row' });
-  async function fillPresets(): Promise<void> {
-    const ws = getWebsim();
-    let creator = '{user}';
-    let project = '{project_id}';
-    try {
-      const c = (await ws?.getCreator?.()) as { username?: string } | undefined;
-      if (c?.username) creator = c.username;
-      const p = (await ws?.getCurrentProject?.()) as { id?: string } | undefined;
-      if (p?.id) project = p.id;
-    } catch {
-      // keep placeholders
-    }
-    const base = 'https://websim.com/api/v1';
-    const list: [string, string][] = [
-      ['user', `${base}/users/${creator}`],
-      ['stats', `${base}/users/${creator}/stats`],
-      ['followers', `${base}/users/${creator}/follower-users?first=20&include=${encodeURIComponent('["follower"]')}`],
-      ['following', `${base}/users/${creator}/following-users?first=20&include=${encodeURIComponent('["following"]')}`],
-      ['projects', `${base}/users/${creator}/projects`],
-      ['comments', `${base}/projects/${project}/comments?first=20`],
-    ];
-    presets.replaceChildren(
-      h('span', { class: 'muted', text: 'websim API:' }),
-      ...list.map(([label, u]) => h('button', { type: 'button', text: label, title: u, onclick: () => open({ method: 'GET', url: u, headers: {} }) })),
-    );
-  }
-
   root.append(
-    h('div', { class: 'pad stack' }, h('div', { class: 'row' }, scanBtn, info), presets),
+    h('div', { class: 'pad stack' }, h('div', { class: 'row' }, scanBtn, info)),
     h(
       'div',
       { class: 'scroll' },
       h('table', { class: 'grid' }, h('thead', {}, h('tr', {}, h('th', { text: 'Method' }), h('th', { text: 'Path' }), h('th', { text: 'Found in' }))), tbody),
     ),
   );
-  void fillPresets();
   void scan();
+}
+
+function presetsView(ctx: ToolContext, root: HTMLElement, open: (spec: RequestSpec) => void): void {
+  const filter = h('input', { class: 'grow', placeholder: 'Filter presets', 'aria-label': 'Filter presets' });
+  const list = h('div', { class: 'scroll presets' });
+  const vars = h('span', { class: 'muted' });
+  let values: PresetVars = {};
+
+  function render(): void {
+    const term = filter.value.toLowerCase();
+    const groups = new Map<string, Preset[]>();
+    for (const p of PRESETS) {
+      if (term && !`${p.group} ${p.name} ${p.url}`.toLowerCase().includes(term)) continue;
+      const g = groups.get(p.group) ?? [];
+      g.push(p);
+      groups.set(p.group, g);
+    }
+    list.replaceChildren(
+      ...[...groups].map(([group, items]) =>
+        h(
+          'section',
+          {},
+          h('h4', { text: group }),
+          items.map((p) => {
+            const { spec, missing } = fillPreset(p, values);
+            return h(
+              'button',
+              {
+                type: 'button',
+                class: 'preset',
+                title: spec.url,
+                onclick: () => {
+                  open(spec);
+                  ctx.status(
+                    missing.length
+                      ? `Loaded “${p.name}”. Replace {${missing.join('}, {')}} in the URL before sending.`
+                      : `Loaded “${p.name}”. Press Send.`,
+                    missing.length > 0,
+                  );
+                },
+              },
+              h('span', { class: 'm', text: p.method }),
+              h('span', { class: 'n', text: p.name }),
+              h('span', { class: 'u', text: spec.url.replace('https://websim.com/api/v1', '…/v1') }),
+              p.note ? h('span', { class: 'note', text: p.note }) : null,
+            );
+          }),
+        ),
+      ),
+    );
+    if (!groups.size) list.append(h('div', { class: 'empty', text: 'No presets match.' }));
+  }
+
+  filter.addEventListener('input', render);
+  root.append(h('div', { class: 'row pad' }, filter, vars), list);
+  render();
+  void presetVars().then((v) => {
+    if (ctx.stopped()) return;
+    values = v;
+    const known = Object.entries(v).filter(([k]) => !k.endsWith('_id')).map(([k, val]) => `${k}=${val}`);
+    vars.textContent = known.length ? 'Filled in: ' + known.join(', ') : 'Couldn’t read creator/viewer/project; placeholders stay as {name}.';
+    render();
+  });
 }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WbSmUtil
 // @namespace    wbsmutil
-// @version      0.4.1
+// @version      0.4.2
 // @description  Dev toolkit userscript for websim projects. Ctrl+Backtick toggles the panel inside a project frame.
 // @match        https://websim.com/*
 // @match        https://*.websim.com/*
@@ -1587,7 +1587,88 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
   }
 
   // src/tools/api/api.css
-  var api_default = ".api { flex: 1; }\n.api-req { width: 46%; flex: none; border-right: 1px solid #303841; }\n.api-resp { flex: 1; }\n.resp-status { min-height: 24px; }\n.pad-x { padding: 0 8px; }\n.api-resp pre.json { font-size: 11px; }\n@media (max-width: 600px) { .api-req { width: auto; border-right: 0; border-bottom: 1px solid #303841; max-height: 55%; } }\n";
+  var api_default = ".api { flex: 1; }\n.api-req { width: 46%; flex: none; border-right: 1px solid #303841; }\n.api-resp { flex: 1; }\n.resp-status { min-height: 24px; }\n.pad-x { padding: 0 8px; }\n.api-resp pre.json { font-size: 11px; }\n@media (max-width: 600px) { .api-req { width: auto; border-right: 0; border-bottom: 1px solid #303841; max-height: 55%; } }\n.presets { padding: 0 8px 8px; display: flex; flex-direction: column; gap: 10px; }\n.presets h4 { margin: 0 0 4px; font-size: 10px; color: #8c98a4; font-weight: 400; text-transform: uppercase; letter-spacing: .04em; }\n.presets section { display: flex; flex-direction: column; gap: 3px; }\n.preset { display: grid; grid-template-columns: 52px minmax(120px, 220px) 1fr; gap: 2px 10px; align-items: baseline; text-align: left; white-space: normal; padding: 5px 8px; }\n.preset .m { font: 10px ui-monospace, monospace; color: #e9b98f; }\n.preset .n { color: #eef0f3; }\n.preset .u { font: 10px ui-monospace, monospace; color: #8c98a4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.preset .note { grid-column: 2 / -1; font-size: 10px; color: #9ca8b3; }\n@media (max-width: 600px) { .preset { grid-template-columns: 44px 1fr; } .preset .u { grid-column: 2; } }\n";
+
+  // src/tools/api/presets.ts
+  var API = "https://websim.com/api/v1";
+  var enc = (json) => encodeURIComponent(json);
+  var PRESETS = [
+    // Project origin
+    { group: "This project", name: "server.js source", method: "GET", url: "/server.js", note: "The backend source. It is public, like every project file." },
+    { group: "This project", name: "Page HTML", method: "GET", url: "/" },
+    { group: "This project", name: "GET /api route", method: "GET", url: "/api/", note: "Template: add your route name." },
+    {
+      group: "This project",
+      name: "POST JSON to /api route",
+      method: "POST",
+      url: "/api/",
+      headers: { "Content-Type": "application/json" },
+      body: "{\n  \n}",
+      note: "Template. Your x-websim-* identity headers are added by the platform."
+    },
+    // Creator
+    { group: "Creator", name: "Profile", method: "GET", url: `${API}/users/{creator}` },
+    { group: "Creator", name: "Stats", method: "GET", url: `${API}/users/{creator}/stats`, note: "Followers, following, total likes and views." },
+    { group: "Creator", name: "Followers", method: "GET", url: `${API}/users/{creator}/follower-users?first=50&include=${enc('["follower"]')}` },
+    { group: "Creator", name: "Following", method: "GET", url: `${API}/users/{creator}/following-users?first=50&include=${enc('["following"]')}` },
+    { group: "Creator", name: "Projects (recently updated)", method: "GET", url: `${API}/users/{creator}/projects` },
+    { group: "Creator", name: "Projects (newest)", method: "GET", url: `${API}/users/{creator}/projects?sort_by=created_at` },
+    // Viewer
+    { group: "You", name: "Profile", method: "GET", url: `${API}/users/{me}`, note: 'Needs you signed in (signed-out id "1" is rejected).' },
+    { group: "You", name: "Stats", method: "GET", url: `${API}/users/{me}/stats` },
+    { group: "You", name: "Projects", method: "GET", url: `${API}/users/{me}/projects` },
+    {
+      group: "You",
+      name: "Do you follow the creator?",
+      method: "GET",
+      url: `${API}/users/{creator_id}/follower-users?ids=${enc('["{me_id}"]')}`,
+      note: "Yes when `data` has a row."
+    },
+    // Comments
+    { group: "Comments", name: "Newest 20", method: "GET", url: `${API}/projects/{project_id}/comments?first=20` },
+    { group: "Comments", name: "Best", method: "GET", url: `${API}/projects/{project_id}/comments?first=20&sort_by=best` },
+    { group: "Comments", name: "Tips only", method: "GET", url: `${API}/projects/{project_id}/comments?first=20&only_tips=true` },
+    { group: "Comments", name: "With video", method: "GET", url: `${API}/projects/{project_id}/comments?first=20&only_video=true` },
+    { group: "Comments", name: "By the creator", method: "GET", url: `${API}/projects/{project_id}/comments?first=20&author_id={creator_id}` },
+    { group: "Comments", name: "Search “bug” (with count)", method: "GET", url: `${API}/projects/{project_id}/comments?q=bug&include_count=true` },
+    { group: "Comments", name: "Replies to a comment", method: "GET", url: `${API}/projects/{project_id}/comments/{comment_id}/replies`, note: "Replace {comment_id}." }
+  ];
+  async function presetVars() {
+    const ws = getWebsim();
+    const vars = {};
+    const settle = async (p) => {
+      try {
+        return await p;
+      } catch {
+        return void 0;
+      }
+    };
+    const [creator, me, project] = await Promise.all([
+      settle(ws?.getCreator?.()),
+      settle(ws?.getCurrentUser?.()),
+      settle(ws?.getCurrentProject?.())
+    ]);
+    if (creator?.username) vars.creator = String(creator.username);
+    if (creator?.id) vars.creator_id = String(creator.id);
+    if (me?.id && me.id !== "1") {
+      vars.me_id = String(me.id);
+      vars.me = String(me.username ?? me.id);
+    }
+    if (project?.id) vars.project_id = String(project.id);
+    return vars;
+  }
+  function fillPreset(p, vars) {
+    const missing = /* @__PURE__ */ new Set();
+    const url = p.url.replace(/\{(\w+)\}|%7B(\w+)%7D/g, (match, a, b) => {
+      const key = a ?? b;
+      if (vars[key] !== void 0) return encodeURIComponent(vars[key]);
+      missing.add(key);
+      return match;
+    });
+    const spec = { method: p.method, url, headers: { ...p.headers ?? {} } };
+    if (p.body !== void 0) spec.body = p.body;
+    return { spec, missing: [...missing] };
+  }
 
   // src/tools/api/index.ts
   var METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"];
@@ -1600,9 +1681,19 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
       const requestEl = h("div");
       const trafficEl = h("div");
       const routesEl = h("div");
+      const presetsEl = h("div");
       const builder = requestBuilder(ctx, requestEl);
       const select = subtabs(ctx.pane, [
         { id: "request", label: "Request", el: requestEl },
+        {
+          id: "presets",
+          label: "Presets",
+          el: presetsEl,
+          init: () => presetsView(ctx, presetsEl, (spec) => {
+            builder.load(spec);
+            select("request");
+          })
+        },
         {
           id: "traffic",
           label: "Traffic",
@@ -1891,42 +1982,73 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
         scanBtn.disabled = false;
       }
     }
-    const presets = h("div", { class: "row" });
-    async function fillPresets() {
-      const ws = getWebsim();
-      let creator = "{user}";
-      let project = "{project_id}";
-      try {
-        const c = await ws?.getCreator?.();
-        if (c?.username) creator = c.username;
-        const p = await ws?.getCurrentProject?.();
-        if (p?.id) project = p.id;
-      } catch {
-      }
-      const base = "https://websim.com/api/v1";
-      const list = [
-        ["user", `${base}/users/${creator}`],
-        ["stats", `${base}/users/${creator}/stats`],
-        ["followers", `${base}/users/${creator}/follower-users?first=20&include=${encodeURIComponent('["follower"]')}`],
-        ["following", `${base}/users/${creator}/following-users?first=20&include=${encodeURIComponent('["following"]')}`],
-        ["projects", `${base}/users/${creator}/projects`],
-        ["comments", `${base}/projects/${project}/comments?first=20`]
-      ];
-      presets.replaceChildren(
-        h("span", { class: "muted", text: "websim API:" }),
-        ...list.map(([label, u]) => h("button", { type: "button", text: label, title: u, onclick: () => open2({ method: "GET", url: u, headers: {} }) }))
-      );
-    }
     root.append(
-      h("div", { class: "pad stack" }, h("div", { class: "row" }, scanBtn, info), presets),
+      h("div", { class: "pad stack" }, h("div", { class: "row" }, scanBtn, info)),
       h(
         "div",
         { class: "scroll" },
         h("table", { class: "grid" }, h("thead", {}, h("tr", {}, h("th", { text: "Method" }), h("th", { text: "Path" }), h("th", { text: "Found in" }))), tbody)
       )
     );
-    void fillPresets();
     void scan();
+  }
+  function presetsView(ctx, root, open2) {
+    const filter = h("input", { class: "grow", placeholder: "Filter presets", "aria-label": "Filter presets" });
+    const list = h("div", { class: "scroll presets" });
+    const vars = h("span", { class: "muted" });
+    let values = {};
+    function render() {
+      const term = filter.value.toLowerCase();
+      const groups = /* @__PURE__ */ new Map();
+      for (const p of PRESETS) {
+        if (term && !`${p.group} ${p.name} ${p.url}`.toLowerCase().includes(term)) continue;
+        const g = groups.get(p.group) ?? [];
+        g.push(p);
+        groups.set(p.group, g);
+      }
+      list.replaceChildren(
+        ...[...groups].map(
+          ([group, items]) => h(
+            "section",
+            {},
+            h("h4", { text: group }),
+            items.map((p) => {
+              const { spec, missing } = fillPreset(p, values);
+              return h(
+                "button",
+                {
+                  type: "button",
+                  class: "preset",
+                  title: spec.url,
+                  onclick: () => {
+                    open2(spec);
+                    ctx.status(
+                      missing.length ? `Loaded “${p.name}”. Replace {${missing.join("}, {")}} in the URL before sending.` : `Loaded “${p.name}”. Press Send.`,
+                      missing.length > 0
+                    );
+                  }
+                },
+                h("span", { class: "m", text: p.method }),
+                h("span", { class: "n", text: p.name }),
+                h("span", { class: "u", text: spec.url.replace("https://websim.com/api/v1", "…/v1") }),
+                p.note ? h("span", { class: "note", text: p.note }) : null
+              );
+            })
+          )
+        )
+      );
+      if (!groups.size) list.append(h("div", { class: "empty", text: "No presets match." }));
+    }
+    filter.addEventListener("input", render);
+    root.append(h("div", { class: "row pad" }, filter, vars), list);
+    render();
+    void presetVars().then((v) => {
+      if (ctx.stopped()) return;
+      values = v;
+      const known = Object.entries(v).filter(([k]) => !k.endsWith("_id")).map(([k, val]) => `${k}=${val}`);
+      vars.textContent = known.length ? "Filled in: " + known.join(", ") : "Couldn’t read creator/viewer/project; placeholders stay as {name}.";
+      render();
+    });
   }
 
   // src/tools/comments/index.ts
@@ -2605,6 +2727,15 @@ try { document.documentElement.setAttribute('data-wbsmutil', ''); } catch (e) {}
   // src/changelog.ts
   var CHANGELOG = [
     {
+      version: "0.4.2",
+      date: "2026-11-16",
+      changes: [
+        "API tab: new Presets list with 21 ready-made requests (this project, creator, you, comments). Creator, viewer and project IDs are filled in automatically.",
+        "API tab: the websim API buttons moved from Routes into Presets.",
+        "Project tab: when you’re viewing your own project, the viewer and creator cards merge into one."
+      ]
+    },
+    {
       version: "0.4.1",
       date: "2026-11-16",
       changes: ["New Home tab with this changelog. The window now opens here instead of on Database."]
@@ -2685,7 +2816,7 @@ kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid
             "div",
             { class: "home-head" },
             h("h2", { text: "WbSmUtil" }),
-            h("span", { class: "badge", text: "v0.4.1" }),
+            h("span", { class: "badge", text: "v0.4.2" }),
             h("span", { class: "muted" }, "Toggle with ", h("kbd", { text: HOTKEY.label }), " · ", location.host)
           ),
           h(
@@ -2724,7 +2855,7 @@ kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid
           )
         )
       );
-      ctx.status(`WbSmUtil v${"0.4.1"} ready.`);
+      ctx.status(`WbSmUtil v${"0.4.2"} ready.`);
     }
   };
 
@@ -3040,32 +3171,47 @@ kbd { font: 11px ui-monospace, monospace; background: #2a3037; border: 1px solid
       );
       hooks.replaceChildren(kv([...hub.hooks.entries()]));
     }
-    async function card(title, key) {
+    async function fetchIdentity(key) {
       try {
-        const value = await ctx.wait(requireWebsim(key)(), 15e3);
-        const username = value.username;
-        const extra = [];
-        if (key === "getCurrentUser" && value.id === "1") extra.push(["note", 'signed out (id "1")']);
-        if (key === "getCurrentProject") extra.push(["link", `https://websim.com/p/${String(value.id)}`]);
-        return h(
-          "div",
-          { class: "p-card stack" },
-          h("div", { class: "who" }, avatar(username), h("strong", { text: title }), h("span", { class: "muted", text: String(username ?? value.title ?? value.id ?? "") })),
-          extra.length ? kv(extra) : null,
-          h("div", { class: "box" }, jsonBlock(value))
-        );
+        return { value: await ctx.wait(requireWebsim(key)(), 15e3) };
       } catch (error) {
-        return h("div", { class: "p-card" }, h("strong", { text: title }), h("div", { class: "error-text", text: errorMessage(error) }));
+        return { error };
       }
+    }
+    function card(title, result, extra = [], json) {
+      if ("error" in result) {
+        return h("div", { class: "p-card" }, h("strong", { text: title }), h("div", { class: "error-text", text: errorMessage(result.error) }));
+      }
+      const { value } = result;
+      const username = value.username;
+      return h(
+        "div",
+        { class: "p-card stack" },
+        h("div", { class: "who" }, avatar(username), h("strong", { text: title }), h("span", { class: "muted", text: String(username ?? value.title ?? value.id ?? "") })),
+        extra.length ? kv(extra) : null,
+        h("div", { class: "box" }, jsonBlock(json ?? value))
+      );
     }
     async function loadIdentity() {
       identity.replaceChildren(h("div", { class: "muted", text: "Loading…" }));
-      const cards = await Promise.all([
-        card("Project", "getCurrentProject"),
-        card("You (viewer)", "getCurrentUser"),
-        card("Creator", "getCreator")
+      const [project, viewer, creator] = await Promise.all([
+        fetchIdentity("getCurrentProject"),
+        fetchIdentity("getCurrentUser"),
+        fetchIdentity("getCreator")
       ]);
-      if (!ctx.stopped()) identity.replaceChildren(...cards);
+      if (ctx.stopped()) return;
+      const cards = [
+        card("Project", project, "value" in project ? [["link", `https://websim.com/p/${String(project.value.id)}`]] : [])
+      ];
+      const viewerId = "value" in viewer ? viewer.value.id : void 0;
+      const creatorId = "value" in creator ? creator.value.id : void 0;
+      if (viewerId !== void 0 && viewerId !== "1" && viewerId === creatorId && "value" in creator) {
+        const same = JSON.stringify(viewer) === JSON.stringify(creator);
+        cards.push(card("You (viewer & creator)", viewer, [["role", "you created this project"]], same ? void 0 : { viewer: viewer.value, creator: creator.value }));
+      } else {
+        cards.push(card("You (viewer)", viewer, viewerId === "1" ? [["note", 'signed out (id "1")']] : []), card("Creator", creator));
+      }
+      identity.replaceChildren(...cards);
     }
     async function notifCall(kind2) {
       try {
