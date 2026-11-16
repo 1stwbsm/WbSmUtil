@@ -124,10 +124,14 @@ for (let y = 10; y < 300; y += 11) {
   while (x < S - 12) {
     const w = Math.min(8 + Math.round(rand() * 30), S - 10 - x);
     if (w < 6) break;
-    // Dense near the corner, fading out with distance from it.
+    // Densest just past the block cloud's outer edge, thinning further out,
+    // with a lean toward the corner.
+    const f = proj(x + w / 2, y + 3) - frontier; // <0: among the blocks
+    const band = f < -34 ? 0 : f < 50 ? 1 : Math.max(0, 1 - (f - 50) / 90);
     const d = Math.hypot(CORNER.x - (x + w / 2), y - CORNER.y);
-    const near = Math.max(0, 1 - Math.max(0, d - 60) / 150);
-    if (rand() < 0.95 * Math.pow(near, 1.3)) {
+    const corner = Math.max(0, 1 - Math.max(0, d - 120) / 200);
+    const near = band * corner;
+    if (rand() < 0.95 * Math.pow(near, 1.1)) {
       const op = r1((0.35 + 0.6 * near) * 100) / 100;
       code += `<rect x="${x}" y="${y}" width="${w}" height="5.5" rx="2.75" fill="${pick(palette)}" opacity="${op}"/>`;
     }
@@ -142,8 +146,8 @@ const wrench = dataUrl('monkey_wrench.png', 288);
 
 // Wrench: bottom-left, as drawn (jaw top-left), lying across the swirl.
 const WS = 250;
-const WX = 2;
-const WY = S - WS - 18;
+const WX = 30;
+const WY = S - WS - 34;
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}">
 <title>WbSmUtil</title>

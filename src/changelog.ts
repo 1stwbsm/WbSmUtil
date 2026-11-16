@@ -8,6 +8,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.4.6',
+    date: '2026-11-16',
+    changes: ['Logo: the code lines start right where the blocks thin out, and the wrench sits closer to the swirl.'],
+  },
+  {
     version: '0.4.5',
     date: '2026-11-16',
     changes: [
